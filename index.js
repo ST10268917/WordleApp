@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { db } from './firebase.js';
 import express from 'express';
 import cors from 'cors';
-import { fetchRandomFiveLetterWord, fetchBestDefinitionForWord, fetchBestSynonymForWord } from './wordsApi.js';
+import { fetchRandomFiveLetterWord, fetchBestDefinitionForWord, fetchBestSynonymForWord } from './wordsapi.js';
 
 
 const app = express();
@@ -18,7 +18,7 @@ function dailyDocId(dateStr, lang = 'en-ZA', mode = 'daily') {
   return `${dateStr}_${lang}_${mode}`;
 }
 
-
+//Endpoint to get the daily word 
 app.get('/api/v1/word/today', async (req, res) => {
   try {
     const lang = (req.query.lang || 'en-ZA').toString();
@@ -84,6 +84,61 @@ app.get('/api/v1/word/today', async (req, res) => {
     res.status(500).json({ error: "Failed to load today's word" });
   }
 });
+
+// GET the single stored definition for the daily puzzle
+app.get('/api/v1/word/definition', async (req, res) => {
+  try {
+    const lang = (req.query.lang || 'en-ZA').toString();
+    const date = (req.query.date || todayStr()).toString();
+    const mode = 'daily';
+    const id = dailyDocId(date, lang, mode);
+
+    const snap = await db.collection('puzzles').doc(id).get();
+    if (!snap.exists) {
+      return res.status(404).json({ error: 'No puzzle found for the requested date/language' });
+    }
+
+    const data = snap.data();
+    // Never return the answer
+    return res.json({
+      date: data.date,
+      lang: data.lang,
+      mode: data.mode,
+      definition: data.definition || null
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to load definition' });
+  }
+});
+
+// GET the single stored synonym for the daily puzzle
+app.get('/api/v1/word/synonym', async (req, res) => {
+  try {
+    const lang = (req.query.lang || 'en-ZA').toString();
+    const date = (req.query.date || todayStr()).toString();
+    const mode = 'daily';
+    const id = dailyDocId(date, lang, mode);
+
+    const snap = await db.collection('puzzles').doc(id).get();
+    if (!snap.exists) {
+      return res.status(404).json({ error: 'No puzzle found for the requested date/language' });
+    }
+
+    const data = snap.data();
+    // Never return the answer
+    return res.json({
+      date: data.date,
+      lang: data.lang,
+      mode: data.mode,
+      synonym: data.synonym || null
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to load synonym' });
+  }
+});
+
 
 
 
