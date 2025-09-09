@@ -118,3 +118,27 @@ export async function fetchBestSynonymForWord(wordUpper) {
 function pickFallback() {
   return FALLBACK_WORDS[Math.floor(Math.random() * FALLBACK_WORDS.length)];
 }
+
+// Check if a word is valid by asking WordsAPI for its definitions
+export async function isRealWord(word) {
+  if (!WORDSAPI_KEY) return false; // fail safe if no key
+  try {
+    const res = await axios.get(`https://${WORDSAPI_HOST}/words/${word.toLowerCase()}/definitions`, {
+      headers: {
+        'X-RapidAPI-Key': WORDSAPI_KEY,
+        'X-RapidAPI-Host': WORDSAPI_HOST
+      },
+      timeout: 8000
+    });
+
+    // If the API returns at least one definition, it’s a real word
+    return Array.isArray(res.data.definitions) && res.data.definitions.length > 0;
+  } catch (e) {
+    // 404 from WordsAPI means "not a real word"
+    if (e.response && e.response.status === 404) {
+      return false;
+    }
+    console.error(`Error checking word validity for "${word}":`, e.message);
+    return false;
+  }
+}

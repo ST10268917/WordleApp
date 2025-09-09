@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { db } from './firebase.js';
 import express from 'express';
 import cors from 'cors';
-import { fetchRandomFiveLetterWord, fetchBestDefinitionForWord, fetchBestSynonymForWord } from './wordsapi.js';
+import { fetchRandomFiveLetterWord, fetchBestDefinitionForWord, fetchBestSynonymForWord, isRealWord  } from './wordsapi.js';
 
 
 const app = express();
@@ -16,6 +16,38 @@ function todayStr() {
 }
 function dailyDocId(dateStr, lang = 'en-ZA', mode = 'daily') {
   return `${dateStr}_${lang}_${mode}`;
+}
+
+function isAlphaWord(s) {
+  return typeof s === 'string' && /^[A-Za-z]+$/.test(s);
+}
+
+function computeFeedback(guessUpper, answerUpper) {
+  const n = answerUpper.length;
+  const res = new Array(n).fill('B'); // default grey/blank
+
+  // Track remaining counts of each letter after greens
+  const rem = {}; // { char: count }
+  for (let i = 0; i < n; i++) {
+    if (guessUpper[i] === answerUpper[i]) {
+      res[i] = 'G';
+    } else {
+      const ch = answerUpper[i];
+      rem[ch] = (rem[ch] || 0) + 1;
+    }
+  }
+
+  // Second pass: assign Y where applicable
+  for (let i = 0; i < n; i++) {
+    if (res[i] === 'G') continue;
+    const ch = guessUpper[i];
+    if (rem[ch] > 0) {
+      res[i] = 'Y';
+      rem[ch] -= 1;
+    }
+  }
+
+  return res; // array like ["B","G","Y","B","B"]
 }
 
 //Endpoint to get the daily word 
@@ -139,6 +171,67 @@ app.get('/api/v1/word/synonym', async (req, res) => {
   }
 });
 
+// Validate a guess against today's puzzle without leaking the answer.
+app.post('/api/v1/word/validate', async (req, res) => {
+  try {
+    const lang = (req.body?.lang || 'en-ZA').toString();
+    const date = (req.body?.date || todayStr()).toString();
+    const mode = 'daily';
+    const id = dailyDocId(date, lang, mode);
+
+    const snap = await db.collection('puzzles').doc(id).get();
+    if (!snap.exists) {
+      return res.status(404).json({ error: 'No puzzle found for the requested date/language' });
+    }
+
+    const data = snap.data();
+    const answerUpper = (data.answer || '').toUpperCase();
+    const length = data.length || 5;
+
+    const rawGuess = (req.body?.guess || '').toString();
+    const guessUpper = rawGuess.toUpperCase();
+
+    // Basic validation 
+    if (!isAlphaWord(guessUpper) || guessUpper.length !== length) {
+      return res.status(400).json({ error: `Guess must be ${length} letters A–Z` });
+    }
+
+    // Dictionary validation
+    const real = await isRealWord(guessUpper);
+    if (!real) {
+      return res.status(400).json({ error: 'Guess is not a valid dictionary word' });
+    }
+
+    // Compute Wordle-style feedback
+    const feedback = computeFeedback(guessUpper, answerUpper); // ["B","G","Y","B","B"]
+
+    // We collapse per-letter best state: G > Y > B
+    const keyboard = {};
+    for (let i = 0; i < feedback.length; i++) {
+      const ch = guessUpper[i];
+      const rank = (c) => (c === 'G' ? 3 : c === 'Y' ? 2 : 1);
+      if (!keyboard[ch] || rank(feedback[i]) > rank(keyboard[ch])) {
+        keyboard[ch] = feedback[i];
+      }
+    }
+
+    const won = feedback.every(c => c === 'G');
+
+    return res.json({
+      date: data.date,
+      lang: data.lang,
+      mode: data.mode,
+      length,
+      guess: guessUpper,
+      feedback,         // e.g., ["B","G","Y","B","B"]
+      won               // boolean convenience flag
+    });
+
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to validate guess' });
+  }
+});
 
 
 
