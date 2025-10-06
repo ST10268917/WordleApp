@@ -26,6 +26,9 @@ app.use(optionalAuth);
 
 const PORT = process.env.PORT || 4000;
 
+// health endpoint
+app.get('/health', (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+
 /* ------------------ DAILY ROUTES ------------------ */
 
 // GET /api/v1/word/today
@@ -287,7 +290,6 @@ app.post('/api/v1/speedle/start', async (req, res) => {
 
     const sessionId = genId('sp');
     const startedAt = new Date().toISOString();
-    const dateIso = todayStr();
 
     const sessionDoc = {
       sessionId,
@@ -297,7 +299,7 @@ app.post('/api/v1/speedle/start', async (req, res) => {
       lang,
       durationSec,
       startedAt,
-      date: dateIso,
+      date: todayStr(),
       guessesUsed: 0,
       hintUsed: false,
       hintPenaltySec: 0,
