@@ -1,4 +1,3 @@
-
 import express from 'express';
 import cors from 'cors';
 import { db } from './firebase.js';
@@ -23,11 +22,11 @@ import {
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(optionalAuth); // makes req.user available if the client sent a valid token
+app.use(optionalAuth);
 
 const PORT = process.env.PORT || 4000;
 
-// ------------------ DAILY ROUTES ------------------
+/* ------------------ DAILY ROUTES ------------------ */
 
 // GET /api/v1/word/today
 app.get('/api/v1/word/today', async (req, res) => {
@@ -38,6 +37,7 @@ app.get('/api/v1/word/today', async (req, res) => {
     const id = dailyDocId(date, lang, mode);
     const ref = db.collection('puzzles').doc(id);
 
+    // has this authenticated user already played?
     let played = false;
     if (req.user?.uid) {
       const playedDocId = `${date}_${lang}_${req.user.uid}`;
@@ -45,11 +45,11 @@ app.get('/api/v1/word/today', async (req, res) => {
       played = playedSnap.exists;
     }
 
-    // 1) Try Firestore
+    // Try Firestore
     const snap = await ref.get();
     if (snap.exists) {
       const data = snap.data();
-      const { answer, definition, synonym, ...publicMeta } = data; // never leak answer
+      const { answer, definition, synonym, ...publicMeta } = data;
       return res.json({
         ...publicMeta,
         hasDefinition: !!definition,
@@ -58,7 +58,7 @@ app.get('/api/v1/word/today', async (req, res) => {
       });
     }
 
-    // 2) Seed if missing (retry to get a word with a definition)
+    // Seed if missing (retry to get a word with a definition)
     let word = null;
     let bestDef = null;
     for (let attempt = 1; attempt <= 5; attempt++) {
@@ -102,14 +102,35 @@ app.get('/api/v1/word/today', async (req, res) => {
   }
 });
 
+// GET /api/v1/word/definition
+app.get('/api/v1/word/definition', async (req, res) => {
+  try {
+    const lang = (req.query.lang || 'en-ZA').toString();
+    const date = (req.query.date || todayStr()).toString();
+    const id = dailyDocId(date, lang, 'daily');
+
+    const snap = await db.collection('puzzles').doc(id).get();
+    if (!snap.exists) return res.status(404).json({ error: 'No puzzle found' });
+
+    const data = snap.data();
+    res.json({
+      date: data.date,
+      lang: data.lang,
+      mode: data.mode,
+      definition: data.definition || null
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to load definition' });
+  }
+});
 
 // GET /api/v1/word/synonym
 app.get('/api/v1/word/synonym', async (req, res) => {
   try {
     const lang = (req.query.lang || 'en-ZA').toString();
     const date = (req.query.date || todayStr()).toString();
-    const mode = 'daily';
-    const id = dailyDocId(date, lang, mode);
+    const id = dailyDocId(date, lang, 'daily');
 
     const snap = await db.collection('puzzles').doc(id).get();
     if (!snap.exists) return res.status(404).json({ error: 'No puzzle found' });
@@ -127,14 +148,12 @@ app.get('/api/v1/word/synonym', async (req, res) => {
   }
 });
 
-// POST /api/v1/word/validate
-app.post('/api/v1/word/validate', async (req, res) => {
-  const uid = req.user.uid;
+// POST /api/v1/word/validate  
+app.post('/api/v1/word/validate', requireAuth, async (req, res) => {
   try {
     const lang = (req.body?.lang || 'en-ZA').toString();
     const date = (req.body?.date || todayStr()).toString();
-    const mode = 'daily';
-    const id = dailyDocId(date, lang, mode);
+    const id = dailyDocId(date, lang, 'daily');
 
     const snap = await db.collection('puzzles').doc(id).get();
     if (!snap.exists) return res.status(404).json({ error: 'No puzzle found' });
@@ -174,48 +193,79 @@ app.post('/api/v1/word/validate', async (req, res) => {
 });
 
 // POST /api/v1/word/submit
-// body: { date, lang, won, guessCount, durationSec?, clientId? }
-//to check if the user has played already 
 app.post('/api/v1/word/submit', requireAuth, async (req, res) => {
   try {
     const uid = req.user.uid;
-    const date = (req.body?.date || todayStr()).toString();
     const lang = (req.body?.lang || 'en-ZA').toString();
-    const won = Boolean(req.body?.won);
-    const guessCount = Number(req.body?.guessCount);
-    const durationSec = req.body?.durationSec != null ? Number(req.body.durationSec) : null;
-    const clientId = (req.body?.clientId || '').toString() || null;
+    const date = (req.body?.date || todayStr()).toString();
+    const guesses = Array.isArray(req.body?.guesses) ? req.body.guesses.map(String) : [];
+    const won = !!req.body?.won;
+    const durationSec = Number(req.body?.durationSec ?? 0);
+    const clientId = (req.body?.clientId || '').toString();
 
-    if (!date || !lang || !Number.isFinite(guessCount)) {
-      return res.status(400).json({ error: 'Invalid payload' });
+    if (guesses.length === 0 || guesses.some(g => g.length !== 5)) {
+      return res.status(400).json({ error: 'Invalid guesses array' });
     }
 
+    const puzzleId = dailyDocId(date, lang, 'daily');
+    const pSnap = await db.collection('puzzles').doc(puzzleId).get();
+    if (!pSnap.exists) return res.status(404).json({ error: 'No puzzle found' });
+    const answer = (pSnap.data().answer || '').toUpperCase();
+
+    const feedbackRows = guesses.map(g => computeFeedback(g.toUpperCase(), answer));
     const docId = `${date}_${lang}_${uid}`;
+    const payload = {
+      uid, date, lang, mode: 'daily',
+      guesses, feedbackRows, won,
+      guessCount: guesses.length,
+      durationSec,
+      clientId: clientId || null,
+      submittedAt: new Date().toISOString()
+    };
+
     const ref = db.collection('results').doc(docId);
-    const snap = await ref.get();
-    if (snap.exists) {
+    const existing = await ref.get();
+    if (existing.exists) {
       return res.json({ status: 'ok', deduped: true });
     }
 
-    await ref.set({
-      date, lang, uid,
-      won, guessCount,
-      durationSec,
-      clientId,
-      createdAt: new Date().toISOString()
-    });
-
-    return res.json({ status: 'ok' });
+    await ref.set(payload, { merge: false });
+    res.json({ status: 'ok' });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Failed to submit result' });
   }
 });
 
+// GET /api/v1/word/myresult
+app.get('/api/v1/word/myresult', requireAuth, async (req, res) => {
+  try {
+    const uid = req.user.uid;
+    const date = (req.query.date || todayStr()).toString();
+    const lang = (req.query.lang || 'en-ZA').toString();
+    const docId = `${date}_${lang}_${uid}`;
+    const snap = await db.collection('results').doc(docId).get();
+    if (!snap.exists) return res.status(404).json({ error: 'No result yet' });
+    const r = snap.data();
+    res.json({
+      date: r.date,
+      lang: r.lang,
+      mode: 'daily',
+      guesses: r.guesses || [],
+      feedbackRows: r.feedbackRows || [],
+      won: !!r.won,
+      guessCount: r.guessCount || (r.guesses?.length ?? 0),
+      durationSec: r.durationSec ?? 0,
+      submittedAt: r.submittedAt || null
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to load result' });
+  }
+});
 
-// ------------------ SPEEDLE ROUTES  ------------------
+/* ------------------ SPEEDLE ROUTES ------------------ */
 
-// POST /api/v1/speedle/start
 app.post('/api/v1/speedle/start', async (req, res) => {
   try {
     const lang = (req.body?.lang || 'en-ZA').toString();
@@ -224,7 +274,6 @@ app.post('/api/v1/speedle/start', async (req, res) => {
       return res.status(400).json({ error: 'durationSec must be 60, 90, or 120' });
     }
 
-    // avoid duplicating daily answer
     const dailyId = dailyDocId(todayStr(), lang, 'daily');
     const dailySnap = await db.collection('puzzles').doc(dailyId).get();
     const dailyAnswer = dailySnap.exists ? (dailySnap.data().answer || '').toUpperCase() : null;
@@ -238,11 +287,12 @@ app.post('/api/v1/speedle/start', async (req, res) => {
 
     const sessionId = genId('sp');
     const startedAt = new Date().toISOString();
+    const dateIso = todayStr();
 
     const sessionDoc = {
       sessionId,
       wordId: genId('w'),
-      answer: word, 
+      answer: word,
       length: 5,
       lang,
       durationSec,
@@ -252,9 +302,9 @@ app.post('/api/v1/speedle/start', async (req, res) => {
       hintUsed: false,
       hintPenaltySec: 0,
       finishedAt: null,
-      endReason: null, // 'won' | 'timeout' | 'attempts'
+      endReason: null,
       won: false,
-      score: null,  
+      score: null,
       source: 'speedle'
     };
 
@@ -274,7 +324,6 @@ app.post('/api/v1/speedle/start', async (req, res) => {
   }
 });
 
-// POST /api/v1/speedle/validate
 app.post('/api/v1/speedle/validate', async (req, res) => {
   try {
     const sessionId = (req.body?.sessionId || '').toString();
@@ -330,7 +379,6 @@ app.post('/api/v1/speedle/validate', async (req, res) => {
   }
 });
 
-// POST /api/v1/speedle/hint
 app.post('/api/v1/speedle/hint', async (req, res) => {
   try {
     const sessionId = (req.body?.sessionId || '').toString();
@@ -353,7 +401,7 @@ app.post('/api/v1/speedle/hint', async (req, res) => {
 
     const updated = {
       hintUsed: true,
-      hintPenaltySec: (s.hintPenaltySec || 0) + 10 // -10s
+      hintPenaltySec: (s.hintPenaltySec || 0) + 10
     };
     await ref.update(updated);
 
@@ -365,11 +413,10 @@ app.post('/api/v1/speedle/hint', async (req, res) => {
   }
 });
 
-// POST /api/v1/speedle/finish
 app.post('/api/v1/speedle/finish', async (req, res) => {
   try {
     const sessionId = (req.body?.sessionId || '').toString();
-    const endReason = (req.body?.endReason || '').toString(); // 'won' | 'timeout' | 'attempts'
+    const endReason = (req.body?.endReason || '').toString();
     const displayName = (req.body?.displayName || '').toString();
     if (!sessionId) return res.status(400).json({ error: 'Missing sessionId' });
     if (!['won', 'timeout', 'attempts'].includes(endReason)) {
@@ -400,7 +447,7 @@ app.post('/api/v1/speedle/finish', async (req, res) => {
     const defObj = await fetchBestDefinitionForWord(s.answer);
     const synObj = await fetchBestSynonymForWord(s.answer);
 
-   res.json({
+    res.json({
       won,
       timeRemainingSec: remainingSec,
       guessesUsed,
@@ -415,21 +462,19 @@ app.post('/api/v1/speedle/finish', async (req, res) => {
   }
 });
 
-// GET /api/v1/speedle/leaderboard?date=YYYY-MM-DD&duration=90&limit=100
 app.get('/api/v1/speedle/leaderboard', async (req, res) => {
   try {
     const date = (req.query.date || todayStr()).toString();
     const durationSec = Number(req.query.duration || 90);
     const limit = Math.min(200, Number(req.query.limit || 100));
 
-    // won only, same date & duration
     let q = db.collection('speedle_sessions')
       .where('date', '==', date)
       .where('durationSec', '==', durationSec)
       .where('won', '==', true)
       .orderBy('score', 'desc')
-      .orderBy('finishedAt', 'asc')   // tie-break: earlier finish
-      .orderBy('guessesUsed', 'asc')  // tie-break: fewer guesses
+      .orderBy('finishedAt', 'asc')
+      .orderBy('guessesUsed', 'asc')
       .limit(limit);
 
     const snap = await q.get();
@@ -450,11 +495,9 @@ app.get('/api/v1/speedle/leaderboard', async (req, res) => {
     res.json(rows);
   } catch (e) {
     console.error(e);
-    // Firestore needs a composite index the first time you run this query:
-    // follow the console link error once, create index, then it works.
     res.status(500).json({ error: 'Failed to load leaderboard' });
   }
 });
 
-// ------------------ START SERVER ------------------
+/* ------------------ START SERVER ------------------ */
 app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
