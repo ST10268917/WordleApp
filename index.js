@@ -2,6 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 import { db } from './firebase.js';
+import { optionalAuth, requireAuth } from './auth.js';
 
 import {
   todayStr,
@@ -22,6 +23,7 @@ import {
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(optionalAuth); // makes req.user available if the client sent a valid token
 
 const PORT = process.env.PORT || 4000;
 
@@ -36,19 +38,27 @@ app.get('/api/v1/word/today', async (req, res) => {
     const id = dailyDocId(date, lang, mode);
     const ref = db.collection('puzzles').doc(id);
 
-    // Try Firestore
+    let played = false;
+    if (req.user?.uid) {
+      const playedDocId = `${date}_${lang}_${req.user.uid}`;
+      const playedSnap = await db.collection('results').doc(playedDocId).get();
+      played = playedSnap.exists;
+    }
+
+    // 1) Try Firestore
     const snap = await ref.get();
     if (snap.exists) {
       const data = snap.data();
-      const { answer, definition, synonym, ...publicMeta } = data;
+      const { answer, definition, synonym, ...publicMeta } = data; // never leak answer
       return res.json({
         ...publicMeta,
         hasDefinition: !!definition,
-        hasSynonym: !!synonym
+        hasSynonym: !!synonym,
+        played
       });
     }
 
-    // Seed if missing
+    // 2) Seed if missing (retry to get a word with a definition)
     let word = null;
     let bestDef = null;
     for (let attempt = 1; attempt <= 5; attempt++) {
@@ -58,6 +68,7 @@ app.get('/api/v1/word/today', async (req, res) => {
       if (bestDef) break;
     }
 
+    // Synonym — try up to 5 times for the SAME word
     let bestSyn = null;
     for (let attempt = 1; attempt <= 5; attempt++) {
       bestSyn = await fetchBestSynonymForWord(word);
@@ -70,49 +81,27 @@ app.get('/api/v1/word/today', async (req, res) => {
       lang,
       length: 5,
       mode,
-      answer: word,        
-      definition: bestDef, 
-      synonym: bestSyn,    
+      answer: word,         // server-only
+      definition: bestDef,  // single object or null
+      synonym: bestSyn,     // single string or null
       source: 'wordsapi',
       createdAt: new Date().toISOString()
     };
     await ref.set(payload, { merge: false });
 
     const { answer, definition: _def, synonym: _syn, ...publicMeta } = payload;
-    res.json({
+    return res.json({
       ...publicMeta,
       hasDefinition: !!_def,
-      hasSynonym: !!_syn
+      hasSynonym: !!_syn,
+      played
     });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: "Failed to load today's word" });
+    return res.status(500).json({ error: "Failed to load today's word" });
   }
 });
 
-// GET /api/v1/word/definition
-app.get('/api/v1/word/definition', async (req, res) => {
-  try {
-    const lang = (req.query.lang || 'en-ZA').toString();
-    const date = (req.query.date || todayStr()).toString();
-    const mode = 'daily';
-    const id = dailyDocId(date, lang, mode);
-
-    const snap = await db.collection('puzzles').doc(id).get();
-    if (!snap.exists) return res.status(404).json({ error: 'No puzzle found' });
-
-    const data = snap.data();
-    res.json({
-      date: data.date,
-      lang: data.lang,
-      mode: data.mode,
-      definition: data.definition || null
-    });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Failed to load definition' });
-  }
-});
 
 // GET /api/v1/word/synonym
 app.get('/api/v1/word/synonym', async (req, res) => {
@@ -140,6 +129,7 @@ app.get('/api/v1/word/synonym', async (req, res) => {
 
 // POST /api/v1/word/validate
 app.post('/api/v1/word/validate', async (req, res) => {
+  const uid = req.user.uid;
   try {
     const lang = (req.body?.lang || 'en-ZA').toString();
     const date = (req.body?.date || todayStr()).toString();
@@ -183,6 +173,46 @@ app.post('/api/v1/word/validate', async (req, res) => {
   }
 });
 
+// POST /api/v1/word/submit
+// body: { date, lang, won, guessCount, durationSec?, clientId? }
+//to check if the user has played already 
+app.post('/api/v1/word/submit', requireAuth, async (req, res) => {
+  try {
+    const uid = req.user.uid;
+    const date = (req.body?.date || todayStr()).toString();
+    const lang = (req.body?.lang || 'en-ZA').toString();
+    const won = Boolean(req.body?.won);
+    const guessCount = Number(req.body?.guessCount);
+    const durationSec = req.body?.durationSec != null ? Number(req.body.durationSec) : null;
+    const clientId = (req.body?.clientId || '').toString() || null;
+
+    if (!date || !lang || !Number.isFinite(guessCount)) {
+      return res.status(400).json({ error: 'Invalid payload' });
+    }
+
+    const docId = `${date}_${lang}_${uid}`;
+    const ref = db.collection('results').doc(docId);
+    const snap = await ref.get();
+    if (snap.exists) {
+      return res.json({ status: 'ok', deduped: true });
+    }
+
+    await ref.set({
+      date, lang, uid,
+      won, guessCount,
+      durationSec,
+      clientId,
+      createdAt: new Date().toISOString()
+    });
+
+    return res.json({ status: 'ok' });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
 // ------------------ SPEEDLE ROUTES  ------------------
 
 // POST /api/v1/speedle/start
@@ -217,7 +247,7 @@ app.post('/api/v1/speedle/start', async (req, res) => {
       lang,
       durationSec,
       startedAt,
-      date: today,
+      date: dateIso,
       guessesUsed: 0,
       hintUsed: false,
       hintPenaltySec: 0,
