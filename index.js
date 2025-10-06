@@ -17,7 +17,7 @@ import {
   fetchBestDefinitionForWord,
   fetchBestSynonymForWord,
   isRealWord
-} from './wordsapi.js';
+} from './wordsApi.js';
 
 const app = express();
 app.use(cors());
