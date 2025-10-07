@@ -26,10 +26,10 @@ jobs:
       - name: Install dependencies (npm ci)
         run: npm ci
 
-      # --- NEW STEP: Configure Jest for ES Modules (ESM) ---
+      # --- UPDATED STEP: Configure Jest for ES Modules (ESM) without TypeScript dependency ---
       - name: Configure Jest for ESM
         run: |
-          echo "module.exports = { preset: 'ts-jest', testEnvironment: 'node', extensionsToTreatAsEsm: ['.js'] };" > jest.config.js
+          echo "module.exports = { testEnvironment: 'node', extensionsToTreatAsEsm: ['.js'] };" > jest.config.js
 
       # Run the automated unit tests
       - name: Run tests (npm test)
