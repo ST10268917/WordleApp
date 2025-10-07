@@ -34,17 +34,13 @@ jobs:
           # 1. Install Babel dependencies needed for Jest
           npm install --save-dev babel-jest @babel/core @babel/preset-env
           
-          # 2. Create a simple .babelrc file to tell Babel how to transpile modern JS
-          echo '{ "presets": [ ["@babel/preset-env", { "targets": { "node": "current" } }] ] }' > .babelrc
+          # 2. Create a .babelrc file and EXCLUDE node_modules from processing (fixes replaceAll error)
+          echo '{ "presets": [ ["@babel/preset-env", { "targets": { "node": "current" } }] ], "exclude": [ "node_modules/**" ] }' > .babelrc
           
           # 3. Create jest.config.cjs to tell Jest to use the Babel transformer. 
-          # The .cjs extension explicitly tells Node to use CommonJS for this config file, 
-          # fixing the 'ReferenceError: module is not defined' crash.
           echo "module.exports = { testEnvironment: 'node', transform: {}, moduleNameMapper: { '^(\\.{1,2}/.*)\\.js$': '$1' } };" > jest.config.cjs
 
       # Run the automated unit tests
       - name: Run tests (npm test)
         # This command runs the script defined in package.json: "test": "jest"
         run: npm test
-
-
