@@ -26,19 +26,25 @@ jobs:
       - name: Install dependencies (npm ci)
         run: npm ci
 
-      # --- FIX: Configure Jest for robust ES Module (ESM) support ---
-      # This step creates a jest.config.js file to handle ES Module imports correctly.
-      - name: Configure Jest for ESM
+      # --- FINAL FIX: Install Babel and Configure Jest for ultimate ESM/CJS compatibility ---
+      # This step installs the necessary packages and configures Jest to use Babel
+      # to handle all the mixed ES Module (import) and CommonJS (require) syntax.
+      - name: Configure Jest with Babel for Module Resolution
         run: |
-          # moduleNameMapper tells Jest to handle imports ending in .js correctly,
-          # which is necessary because your project uses "type": "module".
-          echo "module.exports = { testEnvironment: 'node', moduleNameMapper: { '^(\\.{1,2}/.*)\\.js$': '$1' } };" > jest.config.js
+          # 1. Install Babel dependencies needed for Jest
+          npm install --save-dev babel-jest @babel/core @babel/preset-env
+          
+          # 2. Create a simple .babelrc file to tell Babel how to transpile modern JS
+          echo '{ "presets": [ ["@babel/preset-env", { "targets": { "node": "current" } }] ] }' > .babelrc
+          
+          # 3. Create jest.config.cjs to tell Jest to use the Babel transformer. 
+          # The .cjs extension explicitly tells Node to use CommonJS for this config file, 
+          # fixing the 'ReferenceError: module is not defined' crash.
+          echo "module.exports = { testEnvironment: 'node', transform: {}, moduleNameMapper: { '^(\\.{1,2}/.*)\\.js$': '$1' } };" > jest.config.cjs
 
       # Run the automated unit tests
       - name: Run tests (npm test)
         # This command runs the script defined in package.json: "test": "jest"
         run: npm test
-
-
 
 
