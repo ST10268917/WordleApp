@@ -1,8 +1,11 @@
-html <img src="50182926-f8c1-4bd6-b849-3fee03a4fd2b.png" width="200"/>
+<p align="center">
+  <img src="50182926-f8c1-4bd6-b849-3fee03a4fd2b.png" width="220" alt="WordRush Logo"/>
+</p>
 
-#  WordRush
+# 🌀 WordRush
 
-WordRush is a next-generation Android word challenge application designed to merge entertainment, education, and competition. Built in Kotlin with Firebase integration, the app delivers an engaging daily puzzle experience, fast-paced Speedle mode, and AI-powered multiplayer — all through a cloud-connected REST API hosted on Render.
+WordRush is a next-generation Android word challenge application that blends fun, learning, and competition.  
+Built in **Kotlin**, powered by **Firebase**, and connected via a **Render-hosted REST API**, it brings daily puzzles, speed modes, and AI-driven multiplayer into one sleek experience.
 
 ---
 
@@ -29,76 +32,72 @@ WordRush is a next-generation Android word challenge application designed to mer
 
 ## 🟢 Introduction
 
-In an era where word games like *Wordle* dominate the digital landscape, **WordRush** stands out as a modern and dynamic reimagination of the genre.  
-Developed in **Kotlin (Android Studio)**, it integrates with a **Node.js + Express REST API** hosted on **Render**, backed by **Firebase Firestore** for data persistence and **RapidAPI’s WordsAPI** for real-time definitions and synonyms.
+In an era where word games like *Wordle* captivate millions, **WordRush** redefines the genre with modern mechanics, cloud connectivity, and visual flair.  
+Developed in **Kotlin (Android Studio)**, it integrates a **Node.js + Express REST API** hosted on **Render**, backed by **Firebase Firestore** and **RapidAPI’s WordsAPI**.
 
-This architecture ensures:
-- A single daily puzzle for all users  
+This ensures:
+- A global daily puzzle  
 - Reliable validation and scalable sessions  
-- Cloud-backed leaderboard and streak systems  
+- Cloud-backed progress tracking and leaderboards  
+
+<p align="center">
+  <img src="https://media1.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyOHlhOWRwd204N2poZ2NjMjhnNGwwbTZqbnJ6Mmt3aWg2OGNoY21oaSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/e34lA8V77WQS0Ut1sG/giphy.gif" width="400"/>
+</p>
 
 ---
-html <img src="https://media1.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyOHlhOWRwd204N2poZ2NjMjhnNGwwbTZqbnJ6Mmt3aWg2OGNoY21oaSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/e34lA8V77WQS0Ut1sG/giphy.gif" width="400"/>
 
 ## 🟠 Purpose
 
-The primary goal of WordRush is to deliver an interactive, educational, and competitive platform that improves users’ vocabulary and cognitive agility.  
-Unlike standard word games, it incorporates **gamification** and **modern UX** to boost engagement through streaks, badges, and timed modes.
-
-Key motivations include:
-- Promoting daily mental exercises  
-- Encouraging language enrichment through definitions  
-- Fostering healthy competition via multiplayer and leaderboards  
+To create an interactive, educational, and competitive platform that strengthens vocabulary and mental agility through quick, rewarding gameplay.  
+Unlike traditional word games, WordRush fuses **gamification**, **streak rewards**, and **timed challenges** to keep players engaged.
 
 ---
 
 ## 🎯 Objectives
 
-- Build a secure, scalable mobile application that enhances linguistic ability.  
-- Integrate **Firebase Authentication** with **Google SSO** and email login.  
-- Implement a **REST API layer** for all gameplay logic and validation.  
-- Incorporate multiple play modes (Daily WordRush, Speedle, Multiplayer AI).  
-- Automate version control, build testing, and deployment using **GitHub Actions**.
+- Develop a scalable, secure mobile application that enhances linguistic ability.  
+- Integrate **Firebase Authentication** (Email + Google SSO).  
+- Implement a **REST API layer** for core gameplay and word validation.  
+- Introduce **multiple game modes** (Daily, Speedle, Multiplayer AI).  
+- Automate builds and deployments using **GitHub Actions** and **Render**.  
 
 ---
 
 ## 💡 Design Considerations
 
 ### 🖋 User Experience (UX)
-- **Dark Mode Interface:** Gradient-based backgrounds reduce eye strain.  
-- **Central Dashboard:** Rounded cards for quick access to all core features.  
-- **Instant Feedback:** Color-coded results (🟩 Green, 🟨 Yellow, ⬜ Grey).  
-- **Gamified Progression:** Visible streak counters and animated badges.  
-- **Accessibility:** Designed for both phone and tablet screen sizes.
+- **Dark/Light Themes:** Modern gradients reduce eye strain.  
+- **Central Dashboard:** Card-based navigation for intuitive access.  
+- **Instant Feedback:** Green = correct, Yellow = misplaced, Grey = incorrect.  
+- **Progress Tracking:** Streaks, achievements, and badge animations.  
+- **Accessibility:** Consistent layouts across all device sizes.
 
 ### 🎨 Visual Design
-- **Color Palette:** Navy, cyan, neon green, rose red, and gold.  
-  - 🟦 Blue → Calm logic (Daily mode)  
-  - 🟩 Green → Speed and challenge (Speedle)  
+- **Color Palette:** Navy, Cyan, Neon Green, Red, and Gold.  
+  - 🟦 Blue → Calm logic (Daily Mode)  
+  - 🟩 Green → Action (Speedle Mode)  
   - 🟥 Red → Competition (Multiplayer)  
-  - 🟨 Gold → Achievement (Streaks and rewards)  
-- **Typography:** Rounded sans-serif fonts for readability.  
-- **Layout:** Card-based design with depth and smooth animations.
+  - 🟨 Gold → Achievement (Streaks)  
+- **Typography:** Rounded sans-serif for readability.  
+- **Layout:** Rounded cards, shadows, and vibrant glow accents.
 
 ---
 
 ## ⚙️ System Architecture
 
-WordRush follows a **client–server model** with three layers:
+WordRush follows a three-layer cloud architecture:
 
 | Layer | Description |
 |-------|--------------|
-| **Frontend (Android)** | Kotlin app using Android Jetpack and Material Components. Handles input, displays hints, and validates guesses. |
-| **Backend (Node.js + Express)** | Hosted on Render, orchestrates game logic, word validation, and leaderboard management. |
-| **Cloud Services (Firebase + WordsAPI)** | Firestore stores progress, WordsAPI provides definitions and synonyms. |
+| **Frontend (Android)** | Kotlin + Material Components. Manages UI, logic, and Firebase login. |
+| **Backend (Node.js + Express)** | Hosted on Render. Handles validation, word data, and gameplay APIs. |
+| **Cloud (Firebase + WordsAPI)** | Firestore stores user data; WordsAPI provides definitions/synonyms. |
 
-**Data Flow Summary:**
+**Data Flow Overview**
 1. User logs in via Firebase (Email or Google SSO).  
-2. The app requests the puzzle or Speedle word from the API.  
-3. Backend retrieves/validates data and returns results.  
-4. Firestore stores streaks, sessions, and badges.  
-
-
+2. App requests a word or session from API.  
+3. API validates via WordsAPI and Firestore.  
+4. Data returned → stored and displayed dynamically.  
 
 ---
 
@@ -108,46 +107,48 @@ WordRush follows a **client–server model** with three layers:
 
 | Endpoint | Method | Description |
 |-----------|---------|-------------|
-| `/word/today` | GET | Returns the daily 5-letter puzzle |
-| `/word/validate` | POST | Validates the user’s guess |
-| `/speedle/start` | POST | Starts a timed Speedle session |
-| `/speedle/validate` | POST | Validates word and time |
-| `/speedle/finish` | POST | Ends session, stores score |
-| `/speedle/leaderboard` | GET | Retrieves top performers |
+| `/word/today` | GET | Retrieves or seeds the daily 5-letter word |
+| `/word/validate` | POST | Validates player’s guess |
+| `/speedle/start` | POST | Starts timed Speedle mode |
+| `/speedle/validate` | POST | Checks guesses & updates timer |
+| `/speedle/finish` | POST | Ends session, saves score |
+| `/speedle/leaderboard` | GET | Displays top players |
 
-**Security:** Firebase ID Token required for all gameplay endpoints.
+**Security:** Authenticated with Firebase ID Token.  
 
 ---
 
 ## 🧩 Features
 
 ### Core Gameplay
-- Daily WordRush puzzle shared globally  
-- Instant per-letter feedback  
-- End-of-round word definition and synonym display  
+- **Daily Puzzle** shared globally  
+- **Real-time feedback** with colored indicators  
+- **Definition reveal** after each game  
 
-### Highlighted Features
-- **Speedle Mode:** Timed 60s/90s/120s gameplay  
-- **Multiplayer vs AI:** Compete against AI opponents (Easy/Medium/Hard)  
-- **Hints System:** Retrieve word definitions with time penalties  
-- **Badges & Streaks:** Unlock glowing achievements for progress  
-- **Light/Dark Mode:** User-controlled interface preference  
+### Highlighted Modes
+- **Speedle:** Timed sprint (60/90/120 seconds)  
+- **Multiplayer vs AI:** Compete against intelligent opponents (Easy–Hard)  
+- **Hints & Power-ups:** Get clues at a cost of time  
+- **Badges & Streaks:** Unlock glowing achievements  
+- **Themes:** Switch between dark and light styles  
+
+<p align="center">
+  <img src="https://media0.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyOHlhOWRwd204N2poZ2NjMjhnNGwwbTZqbnJ6Mmt3aWg2OGNoY21oaSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/62HRHz7zZZYThhTwEI/giphy.gif" width="400"/>
+</p>
 
 ---
 
 ## 📱 Screens
 
-A preview of the WordRush UI experience:
-
 | Screen | Description |
 |--------|--------------|
-| **Welcome** | Animated intro inviting users to play |
-| **Login/Register** | Email + Google SSO authentication |
-| **Dashboard** | Central hub with cards for each mode |
-| **Speedle Mode** | Timer countdown challenge screen |
-| **Multiplayer AI** | AI opponent with visible progress bar |
-| **Badges & Profile** | Player stats, streaks, and achievements |
-| **Settings** | Toggle dark/light mode and haptics |
+| **Welcome** | Eye-catching logo introduction |
+| **Login/Register** | Email + Google SSO |
+| **Dashboard** | Central navigation hub |
+| **Speedle** | Timer-based challenge interface |
+| **Multiplayer AI** | Play versus smart AI |
+| **Badges/Profile** | View progress and stats |
+| **Settings** | Toggle themes and haptics |
 
 ---
 
@@ -159,7 +160,7 @@ A preview of the WordRush UI experience:
 | **Backend** | Node.js, Express, CORS, Axios |
 | **Hosting** | Render |
 | **Database** | Firebase Firestore |
-| **Authentication** | Firebase Auth (Email & Google SSO) |
+| **Authentication** | Firebase Auth (Email & Google) |
 | **External API** | RapidAPI WordsAPI |
 | **CI/CD** | GitHub Actions |
 
@@ -168,34 +169,30 @@ A preview of the WordRush UI experience:
 ## ⚡ Functional Requirements
 
 - Daily WordRush (shared puzzle)  
-- Speedle Mode (60/90/120 sec)  
-- Multiplayer vs AI (3 difficulty levels)  
-- Hints and Definitions  
-- Achievements and Badges  
-- Theme and Haptics Settings  
+- Speedle Mode (timed)  
+- Multiplayer vs AI (Easy–Hard)  
+- Hints, Streaks & Badges  
+- Profile & Settings  
 - Firebase Authentication  
 
 ---
 
 ## 🛡 Non-Functional Requirements
 
-- **Security:** Firebase ID Tokens, Firestore rules, secret management  
-- **Performance:** Cached daily puzzle, API error handling  
-- **Accessibility:** Dark/light parity, TalkBack support  
-- **Maintainability:** Modular helpers and automated builds  
+- **Security:** Firebase ID tokens, Firestore rules, secrets via Render  
+- **Performance:** Cached daily puzzles, timeouts, and error handling  
+- **Accessibility:** Screen reader labels, high contrast themes  
+- **Maintainability:** Modular helpers, semantic commits, CI checks  
 
 ---
 
 ## 🔁 GitHub and CI/CD
 
-**Frontend Repo:** [WordRush Android (Kotlin)](https://github.com/Atiyyahm/Wordleandroidclient.git)  
-**Backend Repo:** [WordRush API (Node.js)](https://github.com/ST10268917/WordleApp.git)
+- **Frontend Repo:** [WordRush Android (Kotlin)](https://github.com/Atiyyahm/Wordleandroidclient.git)  
+- **Backend Repo:** [WordRush API (Node.js)](https://github.com/ST10268917/WordleApp.git)
 
-Both repos use **GitHub Actions** for CI, and **Render** for automated CD deployment.  
-- Android: Verifies Gradle build via Automated Build workflow.  
-- Backend: Runs Node.js smoke tests and auto-deploys to Render.  
-
-These pipelines ensure consistent builds, security, and reproducibility.
+Both use **GitHub Actions** for build automation.  
+Render auto-deploys backend changes on merge to `main`.
 
 ---
 
@@ -207,15 +204,20 @@ These pipelines ensure consistent builds, security, and reproducibility.
 
 ## 🧭 Repository Links
 
-- **Frontend:** [Atiyyahm/Wordleandroidclient](https://github.com/Atiyyahm/Wordleandroidclient.git)  
-- **Backend:** [ST10268917/WordleApp](https://github.com/ST10268917/WordleApp.git)
+- Frontend → [Atiyyahm/Wordleandroidclient](https://github.com/Atiyyahm/Wordleandroidclient.git)  
+- Backend → [ST10268917/WordleApp](https://github.com/ST10268917/WordleApp.git)
 
 ---
-html <img src="https://media1.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyOHlhOWRwd204N2poZ2NjMjhnNGwwbTZqbnJ6Mmt3aWg2OGNoY21oaSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/e34lA8V77WQS0Ut1sG/giphy.gif" width="400"/>
+
+<p align="center">
+  <img src="https://media1.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyOHlhOWRwd204N2poZ2NjMjhnNGwwbTZqbnJ6Mmt3aWg2OGNoY21oaSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/e34lA8V77WQS0Ut1sG/giphy.gif" width="380"/>
+</p>
+
+---
 
 ## 🧠 References
 
-- Fowler, M. (2022). *Continuous Integration and Delivery: Modern DevOps Practices.* ThoughtWorks Insights.  
+- Fowler, M. (2022). *Continuous Integration and Delivery: Modern DevOps Practices.* ThoughtWorks.  
 - GitHub Docs. (2024). *Understanding GitHub Actions Workflows.*  
 - GitHub Marketplace. (2024). *Automated Build Android App Workflow.*  
 - Martin, R.C. (2023). *Clean DevOps: Building and Testing Automation in Practice.*  
@@ -226,12 +228,16 @@ html <img src="https://media1.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyOHlhOWRwd204N2p
 
 ## 🤖 AI Usage Disclosure
 
-This project responsibly incorporated **AI assistance** only in:
-- **Logo generation** (design concept)  
-- **Error resolution** (RetrofitClient and Google SSO fixes)  
-AI was used strictly as a learning and debugging tool — all implementation decisions and content creation were manually completed by the developers.
+During development, **AI** was used responsibly to:
+- Generate the **WordRush logo concept**  
+- Assist with **debugging RetrofitClient and Google SSO issues**  
 
-html <img src="https://media4.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyOHlhOWRwd204N2poZ2NjMjhnNGwwbTZqbnJ6Mmt3aWg2OGNoY21oaSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/NFgM484nJxhYpvDz9C/giphy.gif" width="400"/>
+All implementation and creative decisions were completed manually.  
+AI served only as a supportive tool for learning and troubleshooting.
 
+<p align="center">
+  <img src="https://media4.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyOHlhOWRwd204N2poZ2NjMjhnNGwwbTZqbnJ6Mmt3aWg2OGNoY21oaSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/NFgM484nJxhYpvDz9C/giphy.gif" width="420"/>
+</p>
 
 ---
+
