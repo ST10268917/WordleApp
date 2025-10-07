@@ -1,41 +1,43 @@
-# This workflow runs unit tests for the Node.js backend.
 name: Node.js CI
 
-# Triggers the workflow on pushes to the main branch
 on:
   push:
+    branches: [ "main" ]
+  pull_request:
     branches: [ "main" ]
 
 jobs:
   build:
-    # Use the latest Ubuntu runner hosted by GitHub
+
+    # Use a fresh Ubuntu runner
     runs-on: ubuntu-latest
 
-    # Set up the execution environment
-    steps:
-      - name: Checkout repository code
-        uses: actions/checkout@v4
+    strategy:
+      matrix:
+        # Use Node 20 as specified in your setup
+        node-version: [20.x]
 
-      # Configure Node.js environment
-      - name: Set up Node.js
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Recommended stable Node.js version
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
 
-      # --- FIX: Enforce stable Jest version to resolve internal 'replaceAll' error ---
-      - name: Install dependencies and stable Jest
+      - name: Install dependencies and explicitly set Jest version
         run: |
-          # Use npm install instead of npm ci for a cleaner install path
+          # Install all dependencies based on package-lock.json
           npm install
-          # Explicitly install Jest 29.7.0, which is known to be stable and does not have the internal 'replaceAll' bug
-          npm install --save-dev jest@29.7.0
+          
+          # CRITICAL FIX: Explicitly downgrade Jest to a stable version (29.7.0)
+          # Jest 30.x has internal dependencies that throw errors (e.g., 'replaceAll is not a function') 
+          # due to environment compatibility issues on some runners. 
+          # Forcing 29.7.0 fixes this specific runtime problem.
+          echo "Forcing Jest downgrade to 29.7.0 to fix internal dependency errors."
+          npm install --save-dev jest@29.7.0 --force
 
-      # Configure Jest Environment
-      - name: Configure Test Environment
-        run: |
-          # Create a simple config file to set the environment
-          echo "module.exports = { testEnvironment: 'node' };" > jest.config.js
-
-      # Run the automated unit tests
-      - name: Run tests (npm test)
+      - name: Run tests
+        # This step will now use Jest 29.7.0, which was explicitly installed in the previous step
         run: npm test
