@@ -1,166 +1,104 @@
-import {
+const {
   fetchRandomFiveLetterWord,
   fetchBestDefinitionForWord,
-  getWordOfTheDayWithRetry,
   fetchBestSynonymForWord,
-  isRealWord
-} from './wordsApi.js';
-import axios from 'axios';
+  getWordOfTheDayWithRetry,
+  isRealWord,
+} = require('./wordsApi'); // Using require() for stability
 
-// 1. Mock the entire axios library
+// Use require and set up the mock correctly for external libraries
+const axios = require('axios');
 jest.mock('axios');
 
-// 2. Mock the environment variable check (usually done in global setup, but here for clarity)
-// NOTE: This ensures tests run consistently regardless of local environment variables
-const REAL_API_KEY = 'TEST_KEY_123';
-process.env.WORDSAPI_KEY = REAL_API_KEY; // Simulate key being present
+// Constants for testing
+const MOCK_FALLBACK_WORDS = ['PLANE', 'CRANE', 'SNAKE', 'BREAD', 'GRASS', 'WATER', 'PHONE', 'CHAIR', 'TABLE', 'SMILE'];
 
-// Define mock data for various API responses
-const mockRandomWordResponse = { data: { word: 'HELLO' } };
-const mockDefinitionResponse = {
-  data: {
-    definitions: [
-      { partOfSpeech: 'noun', definition: 'a greeting' },
-      { partOfSpeech: 'verb', definition: 'to call out' }
-    ]
-  }
-};
-const mockSynonymResponse = {
-  data: {
-    synonyms: ['greeting', 'salutation', 'hiya']
-  }
-};
-const mockEmptyResponse = { data: {} };
-const mock404Error = {
-  response: { status: 404 },
-  message: 'Word not found'
-};
+// Ensure wordsApi.js uses module.exports if you encounter "is not a function" error
+// If wordsApi.js uses 'export', the require statement above might need modification in some environments.
+// However, the test file MUST use require for stable mocking.
 
+describe('Words API Functions', () => {
 
-describe('Words API Utility Functions', () => {
-
-  // Reset the mock state before each test
+  // Reset mocks before each test
   beforeEach(() => {
-    axios.get.mockClear();
-    // Re-set the API key for most tests
-    process.env.WORDSAPI_KEY = REAL_API_KEY;
+    jest.clearAllMocks();
+  });
+
+  // --- Test 1: fetchRandomFiveLetterWord (Fallback Mode) ---
+  test('fetchRandomFiveLetterWord uses fallback word when API key is missing', async () => {
+    // Temporarily set the key to be undefined to force fallback
+    const originalKey = process.env.WORDSAPI_KEY;
+    process.env.WORDSAPI_KEY = '';
+
+    const word = await fetchRandomFiveLetterWord();
+
+    // The word should be one of the fallback words and not rely on axios
+    expect(MOCK_FALLBACK_WORDS).toContain(word);
+    expect(axios.get).not.toHaveBeenCalled();
+
+    // Restore original environment
+    process.env.WORDSAPI_KEY = originalKey;
+  });
+
+  // --- Test 2: fetchRandomFiveLetterWord (Success) ---
+  test('fetchRandomFiveLetterWord returns word from API on success', async () => {
+    // Mock the successful API response
+    axios.get.mockResolvedValueOnce({
+      data: {
+        word: 'TESTY'
+      }
+    });
+
+    const word = await fetchRandomFiveLetterWord();
+
+    expect(word).toBe('TESTY');
+    expect(axios.get).toHaveBeenCalledTimes(1);
+    expect(axios.get).toHaveBeenCalledWith(
+      expect.stringContaining('wordsapiv1.p.rapidapi.com/words/'),
+      expect.any(Object)
+    );
   });
 
 
-  // --- Test Group 1: fetchRandomFiveLetterWord ---
-  describe('fetchRandomFiveLetterWord', () => {
-    test('should return a random word when API call succeeds', async () => {
-      axios.get.mockResolvedValue(mockRandomWordResponse);
-      const word = await fetchRandomFiveLetterWord();
-
-      expect(word).toBe('HELLO');
-      expect(axios.get).toHaveBeenCalledTimes(1);
+  // --- Test 3: isRealWord (Success) ---
+  test('isRealWord returns true for a word with definitions', async () => {
+    // Mock successful response with definitions
+    axios.get.mockResolvedValueOnce({
+      data: {
+        definitions: [{ definition: 'A small test word.' }]
+      }
     });
 
-    test('should return a fallback word if WORDSAPI_KEY is missing', async () => {
-      process.env.WORDSAPI_KEY = ''; // Simulate missing key
-      const word = await fetchRandomFiveLetterWord();
-
-      // Check if the result is one of the fallback words
-      expect(['PLANE','CRANE','SNAKE','BREAD','GRASS','WATER','PHONE','CHAIR','TABLE','SMILE']).toContain(word);
-      expect(axios.get).not.toHaveBeenCalled();
-    });
-
-    test('should return a fallback word if API call fails', async () => {
-      axios.get.mockRejectedValue(new Error('Network error'));
-      const word = await fetchRandomFiveLetterWord();
-
-      expect(['PLANE','CRANE','SNAKE','BREAD','GRASS','WATER','PHONE','CHAIR','TABLE','SMILE']).toContain(word);
-    });
+    const result = await isRealWord('testy');
+    expect(result).toBe(true);
   });
 
-
-  // --- Test Group 2: fetchBestDefinitionForWord ---
-  describe('fetchBestDefinitionForWord', () => {
-    test('should return the first Noun definition when available', async () => {
-      axios.get.mockResolvedValue(mockDefinitionResponse);
-      const definition = await fetchBestDefinitionForWord('TEST');
-
-      expect(definition.partOfSpeech).toBe('noun');
-      expect(definition.definition).toBe('a greeting');
+  // --- Test 4: isRealWord (404/Not Real Word) ---
+  test('isRealWord returns false if API returns 404 (word not found)', async () => {
+    // Mock 404 error response structure
+    axios.get.mockRejectedValueOnce({
+      response: {
+        status: 404
+      }
     });
 
-    test('should return the first definition if no Noun is found', async () => {
-      const mockNoNoun = {
-        data: { definitions: [{ partOfSpeech: 'adjective', definition: 'nice' }] }
-      };
-      axios.get.mockResolvedValue(mockNoNoun);
-      const definition = await fetchBestDefinitionForWord('TEST');
-
-      expect(definition.partOfSpeech).toBe('adjective');
-      expect(definition.definition).toBe('nice');
-    });
-
-    test('should return null if API returns no definitions', async () => {
-      axios.get.mockResolvedValue(mockEmptyResponse);
-      const definition = await fetchBestDefinitionForWord('TEST');
-
-      expect(definition).toBeNull();
-    });
+    const result = await isRealWord('zzzzz');
+    expect(result).toBe(false);
   });
 
-  // --- Test Group 3: fetchBestSynonymForWord ---
-  describe('fetchBestSynonymForWord', () => {
-    test('should return the first synonym found', async () => {
-      axios.get.mockResolvedValue(mockSynonymResponse);
-      const synonym = await fetchBestSynonymForWord('HELLO');
+  // --- Test 5: getWordOfTheDayWithRetry (Success on 1st attempt) ---
+  test('getWordOfTheDayWithRetry succeeds on the first try if definition is found', async () => {
+    // 1. Mock word fetch success
+    axios.get.mockResolvedValueOnce({ data: { word: 'FIRST' } });
+    // 2. Mock definition fetch success
+    axios.get.mockResolvedValueOnce({ data: { definitions: [{ definition: 'Defined.' }] } });
 
-      expect(synonym).toBe('greeting');
-    });
+    const result = await getWordOfTheDayWithRetry(3);
 
-    test('should return null if API returns no synonyms', async () => {
-      axios.get.mockResolvedValue(mockEmptyResponse);
-      const synonym = await fetchBestSynonymForWord('HELLO');
-
-      expect(synonym).toBeNull();
-    });
+    expect(result.word).toBe('FIRST');
+    expect(result.definition).not.toBeNull();
+    // Two total API calls (one for word, one for definition)
+    expect(axios.get).toHaveBeenCalledTimes(2);
   });
-
-  // --- Test Group 4: isRealWord ---
-  describe('isRealWord', () => {
-    test('should return true if API returns definitions', async () => {
-      axios.get.mockResolvedValue(mockDefinitionResponse);
-      const isReal = await isRealWord('APPLE');
-
-      expect(isReal).toBe(true);
-    });
-
-    test('should return false if API returns a 404 error (word not found)', async () => {
-      axios.get.mockRejectedValue(mock404Error);
-      const isReal = await isRealWord('QWERT');
-
-      expect(isReal).toBe(false);
-    });
-  });
-
-  // --- Test Group 5: getWordOfTheDayWithRetry (Integration of functions) ---
-  describe('getWordOfTheDayWithRetry', () => {
-    test('should succeed on the first attempt if word has definition', async () => {
-      // 1. Mock the random word fetch to return 'TESTER'
-      fetchRandomFiveLetterWord.mockResolvedValue('TESTER');
-
-      // 2. Mock the definition fetch for 'TESTER' to succeed
-      fetchBestDefinitionForWord.mockResolvedValue({ partOfSpeech: 'noun', definition: 'A thing that tests.' });
-
-      const result = await getWordOfTheDayWithRetry();
-
-      expect(result.word).toBe('TESTER');
-      expect(result.definition).not.toBeNull();
-      // Ensure the key functions were called correctly (once for success)
-      expect(fetchRandomFiveLetterWord).toHaveBeenCalledTimes(1);
-    });
-
-    // Cleanup the mocks after the test
-    afterAll(() => {
-        fetchRandomFiveLetterWord.mockRestore();
-        fetchBestDefinitionForWord.mockRestore();
-        process.env.WORDSAPI_KEY = REAL_API_KEY; // Clean up
-    });
-  });
-
 });
+

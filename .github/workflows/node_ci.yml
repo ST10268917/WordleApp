@@ -27,13 +27,18 @@ jobs:
         run: npm ci
 
       # --- FIX: Configure Jest for robust ES Module (ESM) support ---
+      # This step creates a jest.config.js file to handle ES Module imports correctly.
       - name: Configure Jest for ESM
         run: |
-          # Use moduleNameMapper to ensure ES Modules load correctly in the Jest environment
-          # without requiring manual path specification for every import.
+          # moduleNameMapper tells Jest to handle imports ending in .js correctly,
+          # which is necessary because your project uses "type": "module".
           echo "module.exports = { testEnvironment: 'node', moduleNameMapper: { '^(\\.{1,2}/.*)\\.js$': '$1' } };" > jest.config.js
 
       # Run the automated unit tests
       - name: Run tests (npm test)
         # This command runs the script defined in package.json: "test": "jest"
         run: npm test
+
+
+
+
