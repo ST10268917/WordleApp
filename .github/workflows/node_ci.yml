@@ -22,20 +22,20 @@ jobs:
         with:
           node-version: '20' # Recommended stable Node.js version
 
-      # Install dependencies, but first, force a stable Jest version to fix the 'replaceAll' error
-      - name: Install dependencies (npm ci and stable Jest)
+      # --- FIX: Enforce stable Jest version to resolve internal 'replaceAll' error ---
+      - name: Install dependencies and stable Jest
         run: |
-          npm ci
-          # Override the potentially problematic version with a known stable version of Jest (v29)
+          # Use npm install instead of npm ci for a cleaner install path
+          npm install
+          # Explicitly install Jest 29.7.0, which is known to be stable and does not have the internal 'replaceAll' bug
           npm install --save-dev jest@29.7.0
 
-      # Configure Jest (use jest.config.js for maximum compatibility with forced version)
-      - name: Configure Jest for CommonJS (CJS) tests
+      # Configure Jest Environment
+      - name: Configure Test Environment
         run: |
-          # Use jest.config.js to allow CJS syntax in the config file
+          # Create a simple config file to set the environment
           echo "module.exports = { testEnvironment: 'node' };" > jest.config.js
 
       # Run the automated unit tests
       - name: Run tests (npm test)
-        # This command runs the script defined in package.json: "test": "jest"
         run: npm test
