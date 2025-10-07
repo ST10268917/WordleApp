@@ -501,5 +501,57 @@ app.get('/api/v1/speedle/leaderboard', async (req, res) => {
   }
 });
 
+// POST /api/v1/speedle/finish
+app.post('/api/v1/speedle/finish', async (req, res) => {
+  try {
+    const sessionId   = (req.body?.sessionId || '').toString();
+    const endReason   = (req.body?.endReason || '').toString(); // "won" | "timeout" | "attempts"
+    const displayName = (req.body?.displayName || '').toString();
+
+    if (!sessionId) return res.status(400).json({ error: 'Missing sessionId' });
+    if (!['won', 'timeout', 'attempts'].includes(endReason)) {
+      return res.status(400).json({ error: 'Invalid endReason' });
+    }
+
+    const ref  = db.collection('speedle_sessions').doc(sessionId);
+    const snap = await ref.get();
+    if (!snap.exists) return res.status(404).json({ error: 'Session not found' });
+
+    const s = snap.data();
+
+    const remainingSec = computeRemaining(s);
+    const won          = endReason === 'won';
+    const guessesUsed  = s.guessesUsed || 0;
+    const score        = won ? Math.max(0, (remainingSec * 1000) - (guessesUsed * 10)) : 0;
+
+    await ref.update({
+      finishedAt: new Date().toISOString(),
+      endReason,
+      won,
+      score,
+      timeRemainingSec: remainingSec,
+      guessesUsed,
+      ...(displayName ? { displayName } : {}),
+    });
+
+    const defObj = await fetchBestDefinitionForWord(s.answer);
+    const synObj = await fetchBestSynonymForWord(s.answer);
+
+    res.json({
+      won,
+      timeRemainingSec: remainingSec,
+      guessesUsed,
+      score,
+      leaderboardPosition: null,
+      definition: defObj?.definition || null,
+      synonym:   synObj || null,
+      answer:    (s.answer || null) // <<< NEW: return the actual word
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Finish failed' });
+  }
+});
+
 /* ------------------ START SERVER ------------------ */
 app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
