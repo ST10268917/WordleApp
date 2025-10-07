@@ -210,10 +210,12 @@ app.post('/api/v1/word/submit', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Invalid guesses array' });
     }
 
+    // Load puzzle to compute feedback + answer
     const puzzleId = dailyDocId(date, lang, 'daily');
     const pSnap = await db.collection('puzzles').doc(puzzleId).get();
     if (!pSnap.exists) return res.status(404).json({ error: 'No puzzle found' });
-    const answer = (pSnap.data().answer || '').toUpperCase();
+    const puzzle = pSnap.data();
+    const answer = (puzzle.answer || '').toUpperCase();
 
     const feedbackRows = guesses.map(g => computeFeedback(g.toUpperCase(), answer));
     const docId = `${date}_${lang}_${uid}`;
@@ -229,16 +231,22 @@ app.post('/api/v1/word/submit', requireAuth, async (req, res) => {
     const ref = db.collection('results').doc(docId);
     const existing = await ref.get();
     if (existing.exists) {
-      return res.json({ status: 'ok', deduped: true });
+      // Already recorded → still return the answer so the client can display it
+      return res.json({ status: 'ok', deduped: true, answer });
     }
 
     await ref.set(payload, { merge: false });
-    res.json({ status: 'ok' });
+    res.json({ status: 'ok', answer });
+
+    // Only reveal the word when the user is FINISHED (won OR used all 6)
+    const finished = won || guesses.length >= 6;
+    return res.json({ status: 'ok', ...(finished ? { answer } : {}) });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to submit result' });
   }
 });
+
 
 // GET /api/v1/word/myresult
 app.get('/api/v1/word/myresult', requireAuth, async (req, res) => {
@@ -247,9 +255,16 @@ app.get('/api/v1/word/myresult', requireAuth, async (req, res) => {
     const date = (req.query.date || todayStr()).toString();
     const lang = (req.query.lang || 'en-ZA').toString();
     const docId = `${date}_${lang}_${uid}`;
+
     const snap = await db.collection('results').doc(docId).get();
     if (!snap.exists) return res.status(404).json({ error: 'No result yet' });
     const r = snap.data();
+
+    // load answer from puzzle doc
+    const puzzleId = dailyDocId(date, lang, 'daily');
+    const pSnap = await db.collection('puzzles').doc(puzzleId).get();
+    const answer = pSnap.exists ? (pSnap.data().answer || null) : null;
+
     res.json({
       date: r.date,
       lang: r.lang,
@@ -259,13 +274,15 @@ app.get('/api/v1/word/myresult', requireAuth, async (req, res) => {
       won: !!r.won,
       guessCount: r.guessCount || (r.guesses?.length ?? 0),
       durationSec: r.durationSec ?? 0,
-      submittedAt: r.submittedAt || null
+      submittedAt: r.submittedAt || null,
+      answer  
     });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to load result' });
   }
 });
+
 
 /* ------------------ SPEEDLE ROUTES ------------------ */
 
@@ -415,55 +432,6 @@ app.post('/api/v1/speedle/hint', async (req, res) => {
   }
 });
 
-app.post('/api/v1/speedle/finish', async (req, res) => {
-  try {
-    const sessionId = (req.body?.sessionId || '').toString();
-    const endReason = (req.body?.endReason || '').toString();
-    const displayName = (req.body?.displayName || '').toString();
-    if (!sessionId) return res.status(400).json({ error: 'Missing sessionId' });
-    if (!['won', 'timeout', 'attempts'].includes(endReason)) {
-      return res.status(400).json({ error: 'Invalid endReason' });
-    }
-
-    const ref = db.collection('speedle_sessions').doc(sessionId);
-    const snap = await ref.get();
-    if (!snap.exists) return res.status(404).json({ error: 'Session not found' });
-    const s = snap.data();
-
-    const remainingSec = computeRemaining(s);
-    const won = endReason === 'won';
-
-    const guessesUsed = s.guessesUsed || 0;
-    const score = won ? Math.max(0, (remainingSec * 1000) - (guessesUsed * 10)) : 0;
-
-    await ref.update({
-      finishedAt: new Date().toISOString(),
-      endReason,
-      won,
-      score,
-      timeRemainingSec: remainingSec,
-      guessesUsed,
-      ...(displayName ? { displayName } : {}),
-    });
-
-    const defObj = await fetchBestDefinitionForWord(s.answer);
-    const synObj = await fetchBestSynonymForWord(s.answer);
-
-    res.json({
-      won,
-      timeRemainingSec: remainingSec,
-      guessesUsed,
-      score,
-      leaderboardPosition: null,
-      definition: defObj?.definition || null,
-      synonym: synObj || null,
-    });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Finish failed' });
-  }
-});
-
 app.get('/api/v1/speedle/leaderboard', async (req, res) => {
   try {
     const date = (req.query.date || todayStr()).toString();
@@ -545,7 +513,7 @@ app.post('/api/v1/speedle/finish', async (req, res) => {
       leaderboardPosition: null,
       definition: defObj?.definition || null,
       synonym:   synObj || null,
-      answer:    (s.answer || null) // <<< NEW: return the actual word
+      answer:    (s.answer || null) 
     });
   } catch (e) {
     console.error(e);
