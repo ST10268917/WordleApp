@@ -1,6 +1,6 @@
-<img src="Images/Banner.gif" />
+html <img src="50182926-f8c1-4bd6-b849-3fee03a4fd2b.png" width="200"/>
 
-# 🌀 WordRush
+#  WordRush
 
 WordRush is a next-generation Android word challenge application designed to merge entertainment, education, and competition. Built in Kotlin with Firebase integration, the app delivers an engaging daily puzzle experience, fast-paced Speedle mode, and AI-powered multiplayer — all through a cloud-connected REST API hosted on Render.
 
@@ -38,6 +38,7 @@ This architecture ensures:
 - Cloud-backed leaderboard and streak systems  
 
 ---
+html <img src="https://media1.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyOHlhOWRwd204N2poZ2NjMjhnNGwwbTZqbnJ6Mmt3aWg2OGNoY21oaSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/e34lA8V77WQS0Ut1sG/giphy.gif" width="400"/>
 
 ## 🟠 Purpose
 
@@ -97,7 +98,7 @@ WordRush follows a **client–server model** with three layers:
 3. Backend retrieves/validates data and returns results.  
 4. Firestore stores streaks, sessions, and badges.  
 
-<img src="https://cdn.pixabay.com/animation/2023/06/29/06/23/06-23-06-393_512.gif"/>
+
 
 ---
 
@@ -210,6 +211,7 @@ These pipelines ensure consistent builds, security, and reproducibility.
 - **Backend:** [ST10268917/WordleApp](https://github.com/ST10268917/WordleApp.git)
 
 ---
+html <img src="https://media1.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyOHlhOWRwd204N2poZ2NjMjhnNGwwbTZqbnJ6Mmt3aWg2OGNoY21oaSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/e34lA8V77WQS0Ut1sG/giphy.gif" width="400"/>
 
 ## 🧠 References
 
@@ -229,7 +231,7 @@ This project responsibly incorporated **AI assistance** only in:
 - **Error resolution** (RetrofitClient and Google SSO fixes)  
 AI was used strictly as a learning and debugging tool — all implementation decisions and content creation were manually completed by the developers.
 
-<img src="https://media.tenor.com/u4RZrIbwcwEAAAAj/pokemon-miltank.gif"/>
+html <img src="https://media4.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyOHlhOWRwd204N2poZ2NjMjhnNGwwbTZqbnJ6Mmt3aWg2OGNoY21oaSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/NFgM484nJxhYpvDz9C/giphy.gif" width="400"/>
+
 
 ---
-
