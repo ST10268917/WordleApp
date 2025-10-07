@@ -1,3 +1,4 @@
+# This workflow runs unit tests for the Node.js backend.
 name: Node.js CI
 
 # Triggers the workflow on pushes to the main branch
@@ -24,6 +25,11 @@ jobs:
       # Install dependencies using 'npm ci' for clean, consistent builds
       - name: Install dependencies (npm ci)
         run: npm ci
+
+      # --- NEW STEP: Configure Jest for ES Modules (ESM) ---
+      - name: Configure Jest for ESM
+        run: |
+          echo "module.exports = { preset: 'ts-jest', testEnvironment: 'node', extensionsToTreatAsEsm: ['.js'] };" > jest.config.js
 
       # Run the automated unit tests
       - name: Run tests (npm test)
