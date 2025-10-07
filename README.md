@@ -79,11 +79,11 @@ Before you begin, ensure you have:
    git clone https://github.com/ST10268917/WordleApp.git
    cd WordleApp
 
-2. **Install dependencies**
-```npm install
+2.**Install dependecies**
+npm install
 
-3. **Create enviroment file**
-```env
+3.**Create enviroment file**
+
 WORDSAPI_KEY=d4b96835d4msh663af81a6a5ce3ap1a1e9fjsn71f0d436d2f8
 WORDSAPI_HOST=wordsapiv1.p.rapidapi.com
 GOOGLE_APPLICATION_CREDENTIALS=./keys/serviceAccount.json
@@ -91,11 +91,9 @@ FIREBASE_PROJECT_ID=wordle-5ab92
 PORT=4000
 
 4. **Run the API locally**
-```bash
-npm start
 
+npm start
 or for development
-```bash
 npm run dev
 
 5. **Test your connection**
