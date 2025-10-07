@@ -2,7 +2,7 @@
   <img src="50182926-f8c1-4bd6-b849-3fee03a4fd2b.png" width="220" alt="WordRush Logo"/>
 </p>
 
-# 🌀 WordRush
+#  WordRush
 
 WordRush is a next-generation Android word challenge application that blends fun, learning, and competition.  
 Built in **Kotlin**, powered by **Firebase**, and connected via a **Render-hosted REST API**, it brings daily puzzles, speed modes, and AI-driven multiplayer into one sleek experience.
