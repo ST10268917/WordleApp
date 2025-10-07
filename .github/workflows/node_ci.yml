@@ -26,10 +26,12 @@ jobs:
       - name: Install dependencies (npm ci)
         run: npm ci
 
-      # --- UPDATED STEP: Configure Jest for ES Modules (ESM) without TypeScript dependency ---
+      # --- FIX: Configure Jest for robust ES Module (ESM) support ---
       - name: Configure Jest for ESM
         run: |
-          echo "module.exports = { testEnvironment: 'node', extensionsToTreatAsEsm: ['.js'] };" > jest.config.js
+          # Use moduleNameMapper to ensure ES Modules load correctly in the Jest environment
+          # without requiring manual path specification for every import.
+          echo "module.exports = { testEnvironment: 'node', moduleNameMapper: { '^(\\.{1,2}/.*)\\.js$': '$1' } };" > jest.config.js
 
       # Run the automated unit tests
       - name: Run tests (npm test)
