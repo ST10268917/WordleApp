@@ -5,9 +5,20 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "jest",
     "dev": "node index.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest --runInBand",
+    "test:watch": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test:ci": "cross-env CI=1 NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest --ci --runInBand"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "index.js",
+      "wordsApi.js",
+      "lib/**/*.js",
+      "auth.js"
+    ]
   },
   "keywords": [],
   "author": "",
@@ -21,6 +32,9 @@
     "nanoid": "^5.1.6"
   },
   "devDependencies": {
-    "jest": "^30.2.0"
+    "cross-env": "^10.1.0",
+    "jest": "^30.2.0",
+    "nock": "^14.0.10",
+    "supertest": "^7.1.4"
   }
 }

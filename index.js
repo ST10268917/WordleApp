@@ -237,10 +237,6 @@ app.post('/api/v1/word/submit', requireAuth, async (req, res) => {
 
     await ref.set(payload, { merge: false });
     res.json({ status: 'ok', answer });
-
-    // Only reveal the word when the user is FINISHED (won OR used all 6)
-    const finished = won || guesses.length >= 6;
-    return res.json({ status: 'ok', ...(finished ? { answer } : {}) });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to submit result' });
@@ -521,5 +517,9 @@ app.post('/api/v1/speedle/finish', async (req, res) => {
   }
 });
 
-/* ------------------ START SERVER ------------------ */
-app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
+// Only start the server when not running tests
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
+}
+
+export default app;
