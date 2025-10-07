@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="50182926-f8c1-4bd6-b849-3fee03a4fd2b.png" width="220" alt="WordRush Logo"/>
+  <img src= "https://github.com/ST10268917/WordleApp/blob/main/WordRush_Logo.png" width="220" alt="WordRush Logo"/>
 </p>
 
 #  WordRush
