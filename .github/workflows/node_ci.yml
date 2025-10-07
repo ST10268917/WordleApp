@@ -1,0 +1,31 @@
+name: Node.js CI
+
+# Triggers the workflow on pushes to the main branch
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    # Use the latest Ubuntu runner hosted by GitHub
+    runs-on: ubuntu-latest
+
+    # Set up the execution environment
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      # Configure Node.js environment
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Recommended stable Node.js version
+
+      # Install dependencies using 'npm ci' for clean, consistent builds
+      - name: Install dependencies (npm ci)
+        run: npm ci
+
+      # Run the automated unit tests
+      - name: Run tests (npm test)
+        # This command runs the script defined in package.json: "test": "jest"
+        run: npm test
