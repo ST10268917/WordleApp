@@ -3,23 +3,23 @@ name: Backend CI
 on:
   push:
     paths:
-      - "backend/**"
+      - "**/*.js"
+      - "package.json"
+      - "package-lock.json"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     paths:
-      - "backend/**"
+      - "**/*.js"
+      - "package.json"
+      - "package-lock.json"
       - ".github/workflows/backend-ci.yml"
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend  
     strategy:
       matrix:
         node-version: [18.x, 20.x]
-
     steps:
       - uses: actions/checkout@v4
 
@@ -28,12 +28,14 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: package-lock.json  # << root lockfile
 
       - name: Install
         run: npm ci
 
       - name: Run tests
         env:
-          WORDSAPI_KEY: "dummy"   # not used because we mock wordsApi.js
+          NODE_ENV: test
+          WORDSAPI_KEY: dummy
         run: npm run test:ci
+        
