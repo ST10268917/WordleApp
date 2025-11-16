@@ -52,7 +52,7 @@ app.get('/api/v1/word/today', async (req, res) => {
     const snap = await ref.get();
     if (snap.exists) {
       const data = snap.data();
-      const { answer, definition, synonym, ...publicMeta } = data;
+      const { definition, synonym, ...publicMeta } = data;  // Keep answer, remove only definition/synonym
       return res.json({
         ...publicMeta,
         hasDefinition: !!definition,
@@ -84,15 +84,15 @@ app.get('/api/v1/word/today', async (req, res) => {
       lang,
       length: 5,
       mode,
-      answer: word,         // server-only
-      definition: bestDef,  // single object or null
-      synonym: bestSyn,     // single string or null
+      answer: word,      
+      definition: bestDef,
+      synonym: bestSyn,
       source: 'wordsapi',
       createdAt: new Date().toISOString()
     };
     await ref.set(payload, { merge: false });
 
-    const { answer, definition: _def, synonym: _syn, ...publicMeta } = payload;
+    const { definition: _def, synonym: _syn, ...publicMeta } = payload;  // Keep answer
     return res.json({
       ...publicMeta,
       hasDefinition: !!_def,
