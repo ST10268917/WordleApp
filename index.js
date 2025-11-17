@@ -469,10 +469,13 @@ app.get('/api/v1/speedle/leaderboard', async (req, res) => {
 app.post('/api/v1/speedle/finish', async (req, res) => {
   try {
     const sessionId   = (req.body?.sessionId || '').toString();
-    const endReason   = (req.body?.endReason || '').toString(); // "won" | "timeout" | "attempts"
+    const endReason   = (req.body?.endReason || '').toString(); // won | timeout | attempts
     const displayName = (req.body?.displayName || '').toString();
+    const uid         = (req.body?.uid || '').toString();       // NEW
 
     if (!sessionId) return res.status(400).json({ error: 'Missing sessionId' });
+    if (!uid)       return res.status(400).json({ error: 'Missing uid' });
+
     if (!['won', 'timeout', 'attempts'].includes(endReason)) {
       return res.status(400).json({ error: 'Invalid endReason' });
     }
@@ -486,8 +489,20 @@ app.post('/api/v1/speedle/finish', async (req, res) => {
     const remainingSec = computeRemaining(s);
     const won          = endReason === 'won';
     const guessesUsed  = s.guessesUsed || 0;
-    const score        = won ? Math.max(0, (remainingSec * 1000) - (guessesUsed * 10)) : 0;
 
+    // Better scoring formula (yours)
+    const score = won
+      ? Math.max(0, (remainingSec * 1000) - (guessesUsed * 10))
+      : 0;
+
+    // ---- FETCH USER PROFILE ----
+    const profRef  = db.collection('profiles').doc(uid);
+    const profSnap = await profRef.get();
+
+    const username  = profSnap.get('username') || displayName || 'Player';
+    const photoUrl  = profSnap.get('photoUrl') || null;
+
+    // ---- Write updated final result ----
     await ref.update({
       finishedAt: new Date().toISOString(),
       endReason,
@@ -495,27 +510,35 @@ app.post('/api/v1/speedle/finish', async (req, res) => {
       score,
       timeRemainingSec: remainingSec,
       guessesUsed,
-      ...(displayName ? { displayName } : {}),
+      
+      // NEW: permanently store the user identity
+      uid,
+      username,
+      photoUrl,
+      displayName: username
     });
 
+    // ---- Fetch hints & definition ----
     const defObj = await fetchBestDefinitionForWord(s.answer);
     const synObj = await fetchBestSynonymForWord(s.answer);
 
-    res.json({
+    return res.json({
       won,
       timeRemainingSec: remainingSec,
       guessesUsed,
       score,
-      leaderboardPosition: null,
+      username,
       definition: defObj?.definition || null,
-      synonym:   synObj || null,
-      answer:    (s.answer || null) 
+      synonym: synObj || null,
+      answer: s.answer || null
     });
+
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Finish failed' });
+    console.error('Speedle finish error:', e);
+    return res.status(500).json({ error: 'Finish failed' });
   }
 });
+
 
 // Only start the server when not running tests
 if (process.env.NODE_ENV !== 'test') {
