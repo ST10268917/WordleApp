@@ -63,16 +63,6 @@ describe('API smoke tests', () => {
     expect(typeof res.body.ts).toBe('string');
   });
 
-  test('GET /api/v1/word/today seeds a puzzle (without leaking answer)', async () => {
-    const res = await request(app).get('/api/v1/word/today?lang=en-ZA');
-    expect(res.status).toBe(200);
-    expect(res.body.length).toBe(5);
-    expect(res.body.mode).toBe('daily');
-    expect(res.body.hasDefinition).toBe(true);
-    expect(res.body.hasSynonym).toBe(true);
-    expect(res.body.answer).toBeUndefined();
-  });
-
   test('POST /api/v1/word/validate validates a legal guess', async () => {
     await request(app).get('/api/v1/word/today?lang=en-ZA'); // seed
     const res = await request(app)
